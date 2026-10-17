@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pd-acoustics-gpu"
+version = "0.1.0"
+description = "GPU-accelerated 3D transient acoustic propagation in a representative air-core reactor airgap"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [{name = "PD Acoustics Contributors"}]
+dependencies = ["numpy>=1.24,<3", "matplotlib>=3.7,<4", "pillow>=10,<13"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+video = ["imageio-ffmpeg>=0.5,<1"]
+
+[project.scripts]
+pd-acoustics-simulate = "pd_acoustics.simulate:main"
+pd-acoustics-visualize = "pd_acoustics.visualize:main"
+pd-acoustics-sensitivity = "pd_acoustics.sensitivity:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
