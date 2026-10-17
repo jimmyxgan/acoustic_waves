@@ -77,18 +77,24 @@ def main():
         peak=max(float(np.percentile(np.abs(np.concatenate((xz[ids].ravel(),yz[ids].ravel()))),99.8)),1e-7)
         # Explicit axes placement eliminates the unused canvas to the right of the colorbar.
         # The orientation key is exported separately, never overlaid on the movie.
-        fig=plt.figure(figsize=(9.2,5.25),constrained_layout=False)
-        ax1=fig.add_axes([.085,.13,.315,.72])
-        ax2=fig.add_axes([.49,.13,.385,.72])
-        cax=fig.add_axes([.895,.22,.018,.53])
+        fig=plt.figure(figsize=(12,10),constrained_layout=False)
+        ax1=fig.add_axes([.085,.40,.315,.48])
+        ax2=fig.add_axes([.49,.40,.385,.48])
+        cax=fig.add_axes([.895,.49,.018,.33])
         im1=ax1.imshow(xz[ids[0]],origin='lower',aspect='auto',extent=[x[0]*1e3,x[-1]*1e3,z[0],z[-1]],cmap='RdBu_r',vmin=-peak,vmax=peak)
         im2=ax2.imshow(yz[ids[0]],origin='lower',aspect='auto',extent=[y[0]*1e3,y[-1]*1e3,z[0],z[-1]],cmap='RdBu_r',vmin=-peak,vmax=peak)
-        ax1.set_title('Radial section (x–z) · between windings',fontsize=10)
-        ax2.set_title('Circumferential section (y–z) · between duct sticks',fontsize=10)
+        ax1.set_title('Radial section (x–z) · between windings',fontsize=13)
+        ax2.set_title('Circumferential section (y–z) · between duct sticks',fontsize=13)
         ax1.set_xlabel('Radial x (mm)');ax2.set_xlabel('Circumferential y (mm)')
+        for axis in (ax1,ax2):
+            axis.tick_params(labelsize=11)
+            axis.xaxis.label.set_size(12)
+            axis.yaxis.label.set_size(12)
         ax1.set_ylabel('Height above channel bottom (m)')
         ax2.set_ylabel('Height above channel bottom (m)')
-        fig.colorbar(im1,cax=cax,label='Pressure (Pa)')
+        cb=fig.colorbar(im1,cax=cax,label='Pressure (Pa)')
+        cb.ax.tick_params(labelsize=11)
+        cb.set_label('Pressure (Pa)',fontsize=12)
         # Mark the actual microphone sampling point in BOTH orthogonal slices.
         # It sits below the duct outlet (z < 0), so retain the external-air
         # portion of the axes; never clip the marker to the duct rectangle.
@@ -99,7 +105,7 @@ def main():
                          zorder=12, clip_on=False)
             axis.annotate('Mic', (horizontal, mic_z), xytext=(8, 0),
                           textcoords='offset points', va='center', ha='left',
-                          fontsize=9, fontweight='bold', color='#166534',
+                          fontsize=12, fontweight='bold', color='#166534',
                           zorder=13, clip_on=False)
         # A separate, high-resolution top-view key for independent slide placement.
         from matplotlib.patches import Rectangle
@@ -119,7 +125,7 @@ def main():
         for spine in key.spines.values():spine.set_visible(False)
         keyfig.savefig(root/'slice_orientation_key.png',dpi=220,bbox_inches='tight',pad_inches=.10)
         plt.close(keyfig)
-        title=fig.suptitle('',fontsize=13,y=.97)
+        title=fig.suptitle('',fontsize=17,y=.97)
         def update(j):
             i=ids[j];im1.set_data(xz[i]);im2.set_data(yz[i]);title.set_text(f'PD acoustic propagation | {times[i]*1e3:.2f} ms | {m["frequency_hz"]/1000:g} kHz')
             return im1,im2,title
@@ -131,8 +137,8 @@ def main():
         X,Y,Z=np.meshgrid(xx,yy,zz,indexing='ij')
         width=m['channel_width_m']*1e3; depth=m['channel_depth_m']*1e3; height=m['channel_height_m']*1e3
         mask=(X>=0)&(X<=width)&(Y>=-depth/2)&(Y<=depth/2)&(Z>=0)&(Z<=height)
-        fig=plt.figure(figsize=(7,7),facecolor='white')
-        ax=fig.add_axes([.04,.04,.84,.90],projection='3d',computed_zorder=False)
+        fig=plt.figure(figsize=(12,10),facecolor='white')
+        ax=fig.add_axes([.04,.36,.84,.59],projection='3d',computed_zorder=False)
         ax.view_init(elev=19,azim=-62)
         ax.set_xlim(-width*.4,width*1.4);ax.set_ylim(-depth*.7,depth*.7);ax.set_zlim(-height*.08,height*1.06)
         ax.set_box_aspect((1.0,2.3,4.5),zoom=.91);ax.set_axis_off()
@@ -151,7 +157,7 @@ def main():
         cmap=matplotlib.colormaps['RdBu_r']; norm=colors.Normalize(vmin=-peak,vmax=peak)
         sm=plt.cm.ScalarMappable(norm=norm,cmap=cmap);sm.set_array([])
         fig.colorbar(sm,ax=ax,shrink=.47,pad=.01,label='Acoustic pressure (Pa)')
-        title=fig.suptitle('',fontsize=13,y=.97)
+        title=fig.suptitle('',fontsize=17,y=.97)
         scatter=[None]
         def update(j):
             i=ids[j]
@@ -164,6 +170,45 @@ def main():
             scatter[0]=ax.scatter(px,py,pz,c=cmap(norm(values)),s=5,alpha=.45,depthshade=False,rasterized=True)
             title.set_text(f'3D acoustic pressure | {times[i]*1e3:.2f} ms | {m["frequency_hz"]/1000:g} kHz')
             return scatter[0],title
+    # Shared synchronized waveform panel for both 2D slices and 3D views.
+    # Signal samples are revealed only up to each pressure frame's physical time.
+    waveform_ax=fig.add_axes([.105,.105,.755,.205])
+    microphone_ax=waveform_ax.twinx()
+    source_line,=waveform_ax.plot([],[],color='#cf623c',lw=1.1,label='Source wall velocity')
+    mic_line,=microphone_ax.plot([],[],color='#2176ad',lw=1.1,label='Microphone pressure')
+    arrival=waveform_ax.axvline(m['nominal_arrival_s']*1e3,color='#555',ls='--',lw=1,label='Nominal arrival')
+    cursor=waveform_ax.axvline(times[ids[0]]*1e3,color='#111827',lw=1.1,alpha=.85,label='Current time')
+    waveform_ax.set_xlim(float(t[0]),float(t[-1]))
+    waveform_ax.set_ylim(-max_source,max_source)
+    microphone_ax.set_ylim(-max_mic,max_mic)
+    waveform_ax.axhline(0,color='#555',lw=.65,alpha=.65,zorder=0)
+    waveform_ax.grid(alpha=.15)
+    waveform_ax.set_xlabel('Time (ms)',fontsize=12)
+    waveform_ax.set_ylabel('Source velocity (mm/s)',color='#b24b30',fontsize=12)
+    microphone_ax.set_ylabel('Mic pressure (mPa)',color='#2176ad',fontsize=12)
+    waveform_ax.tick_params(labelsize=11,axis='both')
+    microphone_ax.tick_params(labelsize=11,axis='y',labelcolor='#2176ad')
+    waveform_ax.tick_params(axis='y',labelcolor='#b24b30')
+    waveform_ax.set_title('PD source excitation and microphone detection',fontsize=13,pad=6)
+    waveform_ax.legend([source_line,mic_line,arrival,cursor],
+                       ['Source velocity','Mic pressure','Nominal arrival','Current time'],
+                       loc='upper right',fontsize=10,ncol=2,frameon=False)
+    pressure_update=update
+    def update(j):
+        pressure_artists=pressure_update(j)
+        current_ms=float(times[ids[j]]*1e3)
+        last=int(np.searchsorted(t,current_ms,side='right'))
+        # Include an interpolated sample exactly at the current frame timestamp.
+        if last and last<len(t) and current_ms>t[last-1]:
+            source_line.set_data(np.r_[t[:last],current_ms],
+                                 np.r_[source[:last],np.interp(current_ms,t,source)])
+            mic_line.set_data(np.r_[t[:last],current_ms],
+                              np.r_[mic[:last],np.interp(current_ms,t,mic)])
+        else:
+            source_line.set_data(t[:last],source[:last])
+            mic_line.set_data(t[:last],mic[:last])
+        cursor.set_xdata([current_ms,current_ms])
+        return (*pressure_artists,source_line,mic_line,cursor)
     update(0)
     fig.savefig(root/'pressure_isometric_preview.png' if a.view=='isometric' else root/'pressure_slices_preview.png',dpi=160)
     anim=FuncAnimation(fig,update,frames=len(ids),interval=1000/a.fps,blit=False)

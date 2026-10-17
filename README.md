@@ -102,7 +102,7 @@ pd-acoustics-visualize \
 
 Replace `SCALE` with the `amplitude_scale` printed by the sensitivity command. Omit the flag to show the original reference-amplitude simulation. The scaling assumes linear acoustics and does not rerun the FDTD solver.
 
-The visualizer produces independent files for slide preparation, including `pressure_animation.mp4`, a pressure-slice preview, an orientation-key image, `waveforms.png`, and `microphone_zoom.png`.
+The visualizer produces a **unified synchronized animation** (`pressure_animation.mp4`) with the pressure-field slices (or 3D view) above progressively revealed source/microphone waveforms and a moving time cursor. It also saves independent slide assets: a pressure preview, an orientation-key image, `waveforms.png`, and `microphone_zoom.png`.
 
 ## Repository structure
 
