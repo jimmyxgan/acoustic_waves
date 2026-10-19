@@ -44,6 +44,6 @@ def main():
     fig.savefig(root/'sensitivity_threshold_waveform.png',dpi=200);plt.close(fig)
     print(json.dumps(report,indent=2))
     print('To render the threshold-scaled animation and source/microphone plot:')
-    print(f'pd-acoustics-visualize --input "{root}" --view slices --format mp4 --amplitude-scale {scale:.12g}')
+    print(f'pd-acoustics-visualize --input "{root}" --view slices --format both --amplitude-scale {scale:.12g}')
 
 if __name__=='__main__':main()

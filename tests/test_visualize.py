@@ -30,6 +30,11 @@ def test_gif_separate_files(monkeypatch,results):
     assert (results/'waveforms.png').stat().st_size>1000
     assert (results/'pressure_slices_preview.png').stat().st_size>1000
 
+def test_default_saves_both_formats(monkeypatch,results):
+    invoke(monkeypatch,results)
+    assert (results/'pressure_animation.mp4').stat().st_size>0
+    with Image.open(results/'pressure_animation.gif') as im:assert im.n_frames==2
+
 def test_legacy_slice_data_still_works(monkeypatch,results,capsys):
     with np.load(results/'frames.npz') as d:
         np.savez(results/'frames.npz',times=d['times'],x=d['x'],y=d['y'],z=d['z'],xz=d['xz'],yz=d['yz'])

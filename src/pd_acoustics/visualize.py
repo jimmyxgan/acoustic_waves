@@ -15,7 +15,7 @@ def main():
     parser.add_argument('--input',required=True)
     parser.add_argument('--amplitude-scale',type=float,default=1.0,help='Linear pressure and source scaling for sensitivity study')
     parser.add_argument('--fps',type=int,default=20)
-    parser.add_argument('--format',choices=['mp4','gif'],default='mp4')
+    parser.add_argument('--format',choices=['mp4','gif','both'],default='both')
     parser.add_argument('--max-frames',type=int,default=140)
     parser.add_argument('--view',choices=['isometric','slices'],default='slices')
     parser.add_argument('--volume-percentile',type=float,default=93.,help='absolute pressure percentile above which 3D points are shown')
@@ -66,11 +66,12 @@ def main():
     if len(times)==0:parser.error('No saved animation frames')
     if a.view=='isometric' and vol is None:
         parser.error('3D animation requires volume data. Existing frames.npz only contains 2D slices. Rerun pd-acoustics-simulate with this updated version to save full 3D pressure.')
-    if a.format=='mp4' and not FFMpegWriter.isAvailable():
+    formats=('mp4','gif') if a.format=='both' else (a.format,)
+    if 'mp4' in formats and not FFMpegWriter.isAvailable():
         if importlib.util.find_spec('imageio_ffmpeg'):
             import imageio_ffmpeg
             matplotlib.rcParams['animation.ffmpeg_path']=imageio_ffmpeg.get_ffmpeg_exe()
-        if not FFMpegWriter.isAvailable():parser.error('MP4 needs ffmpeg; install imageio-ffmpeg or use GIF')
+        if not FFMpegWriter.isAvailable():parser.error('MP4 needs ffmpeg; install imageio-ffmpeg or use --format gif')
     ids=np.unique(np.linspace(0,len(times)-1,min(len(times),a.max_frames),dtype=int))
     if a.view=='slices':
         if xz is None or yz is None:parser.error('2D slices unavailable')
@@ -212,11 +213,14 @@ def main():
     update(0)
     fig.savefig(root/'pressure_isometric_preview.png' if a.view=='isometric' else root/'pressure_slices_preview.png',dpi=160)
     anim=FuncAnimation(fig,update,frames=len(ids),interval=1000/a.fps,blit=False)
-    output=root/f'pressure_animation.{a.format}'
-    writer=FFMpegWriter(fps=a.fps,bitrate=2400) if a.format=='mp4' else PillowWriter(fps=a.fps)
-    print(f'Rendering {len(ids)} acoustic animation frames to {output}',flush=True)
-    anim.save(output,writer=writer,dpi=105 if a.format=='mp4' else 85)
+    outputs=[]
+    for output_format in formats:
+        output=root/f'pressure_animation.{output_format}'
+        writer=FFMpegWriter(fps=a.fps,bitrate=2400) if output_format=='mp4' else PillowWriter(fps=a.fps)
+        print(f'Rendering {len(ids)} acoustic animation frames to {output}',flush=True)
+        anim.save(output,writer=writer,dpi=105 if output_format=='mp4' else 85)
+        outputs.append(output)
     plt.close(fig)
-    print(f'Saved: {output}, waveforms.png, microphone_zoom.png',flush=True)
+    print(f'Saved: {", ".join(str(output) for output in outputs)}, waveforms.png, microphone_zoom.png',flush=True)
 
 if __name__=='__main__':main()
